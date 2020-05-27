@@ -33,14 +33,14 @@ const renderCard = response => {
             vote_average: vote,
         } = item;
         const posterIMG = poster ? IMG_URL + poster : 'img/no-poster.jpg';
-        const backdropIMG = backdrop ? IMG_URL + backdrop : 'img/no-poster.jpg';
-        const voteElem = '';
+        const backdropIMG = poster ? IMG_URL + backdrop : 'img/no-poster.jpg';
+        const voteElem = vote ? `<span class='tv-card__vote'>${vote}</span>` : '';
 
         const card = document.createElement('li');
         card.className = 'tv-shows__item';
         card.innerHTML = `
         <a href="#" class="tv-card">
-              <span class="tv-card__vote">${vote}</span>
+              ${voteElem}
               <img class="tv-card__img" 
               src="${posterIMG}" 
               data-backdrop="${backdropIMG}" 
@@ -87,7 +87,6 @@ tvShowsList.addEventListener('mouseover', changeImage);
 tvShowsList.addEventListener('mouseout', changeImage);
 
 // открытие модального окна
-
 modal = document.querySelector('.modal');
 tvShowsList.addEventListener('click', event => {
     const target = event.target;
