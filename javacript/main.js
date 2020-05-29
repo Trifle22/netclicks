@@ -28,6 +28,7 @@ class DBService {
         this.API_KEY = 'aa8cc5268ed1b8f9383f996d3cb2c248';
     }
     getData = async(url) => {
+        tvShows.append(loading);
         const res = await fetch(url);
         if (res.ok) {
             return res.json();
@@ -46,19 +47,23 @@ class DBService {
         .getData(`${this.SERVER}/search/tv?api_key=${this.API_KEY}&language=ru-RU&query=${query}`);
     getTvShow = id => this
         .getData(`${this.SERVER}/tv/${id}?api_key=${this.API_KEY}&language=ru-RU`);
-
+    getTopRated = () => this.getData(`${this.SERVER}/tv/top_rated?api_key=${this.API_KEY}&language=ru-RU`);
+    getPopular = () => this.getData(`${this.SERVER}/tv/popular?api_key=${this.API_KEY}&language=ru-RU`);
+    getToday = () => this.getData(`${this.SERVER}/tv/airing_today?api_key=${this.API_KEY}&language=ru-RU`);
+    getWeek = () => this.getData(`${this.SERVER}/tv/on_the_air?api_key=${this.API_KEY}&language=ru-RU`);
 }
-const renderCard = response => {
+const dbService = new DBService();
+const renderCard = (response, target) => {
     tvShowsList.textContent = '';
     console.log(response);
     if (!response.total_results) {
         loading.remove();
-        TvShowsHead.textContent = ' ничего не найдено';
-        TvShowsHead.style.cssText = 'color : red; '
+        TvShowsHead.textContent = 'Ничего не найдено';
+        TvShowsHead.style.cssText = 'color : red';
         return;
     }
-    TvShowsHead.textContent = 'Результат поиска';
-    TvShowsHead.style.cssText = 'color : black; '
+    TvShowsHead.textContent = target ? target.textContent : 'Результат поиска';
+    TvShowsHead.style.cssText = 'color : green';
 
     response.results.forEach(item => {
         console.log(item);
@@ -95,8 +100,7 @@ searchForm.addEventListener('submit', event => {
     event.preventDefault();
     const value = searchFormInput.value.trim();
     if (value) {
-        tvShows.append(loading);
-        new DBService().getSearchResult(value).then(renderCard);
+        dbService.getSearchResult(value).then(renderCard);
     }
     searchFormInput.value = '';
 });
@@ -105,7 +109,7 @@ const closeDropdown = () => {
         item.classList.remove('active');
 
     })
-}
+};
 
 //окрытие/закрытие меню
 hamburger.addEventListener('click', () => {
@@ -130,7 +134,26 @@ leftMenu.addEventListener('click', () => {
         leftMenu.classList.add('openMenu');
         hamburger.classList.add('open');
     }
+    if (target.closest('#top-rated')) {
+        console.log('top-rated');
+        dbService.getTopRated().then((response) => renderCard(response));
+    }
+    if (target.closest('#popular')) {
+        console.log('popular');
+        dbService.getPopular().then((response) => renderCard(response));
+    }
+    if (target.closest('#week')) {
+        console.log('week');
+        dbService.getWeek().then((response) => renderCard(response));
+    }
+    if (target.closest('#today')) {
+        console.log('today');
+        dbService.getToday().then((response) => renderCard(response));
+    }
+
 });
+
+
 // card change on hover
 const changeImage = event => {
     const card = event.target.closest('.tv-shows__item');
@@ -151,7 +174,7 @@ tvShowsList.addEventListener('click', event => {
     const card = target.closest('.tv-card');
     if (card) {
         preLoader.style.display = 'block';
-        new DBService().getTvShow(card.id)
+        dbService.getTvShow(card.id)
             .then(({
                 poster_path: posterPath,
                 name: title,
