@@ -22,13 +22,14 @@ dropDown = document.querySelectorAll('.dropdown');
 TvShowsHead = document.querySelector('.tv-shows__head');
 posterWrapper = document.querySelector('.poster__wrapper');
 modalContent = document.querySelector('.modal__content');
+pagination = document.querySelector('.pagination');
+
 class DBService {
     constructor() {
         this.SERVER = 'https://api.themoviedb.org/3';
         this.API_KEY = 'aa8cc5268ed1b8f9383f996d3cb2c248';
     }
     getData = async(url) => {
-        tvShows.append(loading);
         const res = await fetch(url);
         if (res.ok) {
             return res.json();
@@ -43,8 +44,14 @@ class DBService {
     getTestCard = () => {
         return this.getData('card.json');
     }
-    getSearchResult = query => this
-        .getData(`${this.SERVER}/search/tv?api_key=${this.API_KEY}&language=ru-RU&query=${query}`);
+    getSearchResult = query => {
+        this.temp = `${this.SERVER}/search/tv?api_key=${this.API_KEY}&language=ru-RU&query=${query}`;
+        return this.getData(this.temp);
+    }
+
+    getNextPage = page => {
+        return this.getData(this.temp + '&page=' + page);
+    }
     getTvShow = id => this
         .getData(`${this.SERVER}/tv/${id}?api_key=${this.API_KEY}&language=ru-RU`);
     getTopRated = () => this.getData(`${this.SERVER}/tv/top_rated?api_key=${this.API_KEY}&language=ru-RU`);
@@ -94,12 +101,19 @@ const renderCard = (response, target) => {
         loading.remove();
         tvShowsList.append(card);
     })
+    pagination.textContent = '';
+    if (!target && response.total_pages > 1) {
+        for (let i = 1; i <= response.total_pages; i++) {
+            pagination.innerHTML += `<li><a href="#" class="pages">${i}</a></li>`;
 
+        }
+    }
 };
 searchForm.addEventListener('submit', event => {
     event.preventDefault();
     const value = searchFormInput.value.trim();
     if (value) {
+        tvShows.append(loading);
         dbService.getSearchResult(value).then(renderCard);
     }
     searchFormInput.value = '';
@@ -135,20 +149,24 @@ leftMenu.addEventListener('click', () => {
         hamburger.classList.add('open');
     }
     if (target.closest('#top-rated')) {
-        console.log('top-rated');
+        tvShows.append(loading);
         dbService.getTopRated().then((response) => renderCard(response));
     }
     if (target.closest('#popular')) {
-        console.log('popular');
+        tvShows.append(loading);
         dbService.getPopular().then((response) => renderCard(response));
     }
     if (target.closest('#week')) {
-        console.log('week');
+        tvShows.append(loading);
         dbService.getWeek().then((response) => renderCard(response));
     }
     if (target.closest('#today')) {
-        console.log('today');
+        tvShows.append(loading);
         dbService.getToday().then((response) => renderCard(response));
+    }
+    if (target.closest('#search')) {
+        tvShowsList.textContent = '';
+        TvShowsHead.textContent = '';
     }
 
 });
@@ -222,3 +240,12 @@ modal.addEventListener('click', event => {
 
     }
 });
+pagination.addEventListener('click', (event) => {
+    event.preventDefault();
+    const target = event.target;
+    if (target.classList.contains('pages')) {
+        tvShows.append(loading);
+        dbService.getNextPage(target.textContent).then(renderCard);
+
+    }
+})
