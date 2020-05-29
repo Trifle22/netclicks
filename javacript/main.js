@@ -17,17 +17,22 @@ description = document.querySelector('.description');
 modalLink = document.querySelector('.modal__link');
 searchForm = document.querySelector('.search__form');
 searchFormInput = document.querySelector('.search__form-input');
-
-//cards
-
-const DBService = class {
+preLoader = document.querySelector('.preloader');
+dropDown = document.querySelectorAll('.dropdown');
+TvShowsHead = document.querySelector('.tv-shows__head');
+posterWrapper = document.querySelector('.poster__wrapper');
+modalContent = document.querySelector('.modal__content');
+class DBService {
+    constructor() {
+        this.SERVER = 'https://api.themoviedb.org/3';
+        this.API_KEY = 'aa8cc5268ed1b8f9383f996d3cb2c248';
+    }
     getData = async(url) => {
         const res = await fetch(url);
         if (res.ok) {
             return res.json();
         } else {
             throw new Error(`Не удалось получить данные по адресу ${url}`);
-
         }
 
     }
@@ -37,29 +42,42 @@ const DBService = class {
     getTestCard = () => {
         return this.getData('card.json');
     }
-    getSearchResult = query => this.getData(`${this.SERVER}/search/tv?api_key=${this.API_KEY}&language=ru-RU&query=${query}`);
-    getTvShow = id => this.getData(`${this.SERVER}/tv/${id}?api_key=${this.API_KEY}&language=ru-RU`);
+    getSearchResult = query => this
+        .getData(`${this.SERVER}/search/tv?api_key=${this.API_KEY}&language=ru-RU&query=${query}`);
+    getTvShow = id => this
+        .getData(`${this.SERVER}/tv/${id}?api_key=${this.API_KEY}&language=ru-RU`);
 
 }
-
 const renderCard = response => {
-    console.log(response);
     tvShowsList.textContent = '';
+    console.log(response);
+    if (!response.total_results) {
+        loading.remove();
+        TvShowsHead.textContent = ' ничего не найдено';
+        TvShowsHead.style.cssText = 'color : red; '
+        return;
+    }
+    TvShowsHead.textContent = 'Результат поиска';
+    TvShowsHead.style.cssText = 'color : black; '
+
     response.results.forEach(item => {
+        console.log(item);
         const {
             backdrop_path: backdrop,
             name: title,
             poster_path: poster,
             vote_average: vote,
+            id
         } = item;
         const posterIMG = poster ? IMG_URL + poster : 'img/no-poster.jpg';
         const backdropIMG = poster ? IMG_URL + backdrop : 'img/no-poster.jpg';
-        const voteElem = vote ? ` < span class = 'tv-card__vote' > $ { vote } < /span>` : '';
+        const voteElem = vote ? `<span class='tv-card__vote'>${vote}</span>` : '';
 
         const card = document.createElement('li');
+        card.idTV = id;
         card.className = 'tv-shows__item';
         card.innerHTML = `
-        <a href="#" class="tv-card">
+        <a href="#" id="${id}" class="tv-card">
               ${voteElem}
               <img class="tv-card__img" 
               src="${posterIMG}" 
@@ -82,20 +100,29 @@ searchForm.addEventListener('submit', event => {
     }
     searchFormInput.value = '';
 });
+const closeDropdown = () => {
+    dropDown.forEach(item => {
+        item.classList.remove('active');
+
+    })
+}
 
 //окрытие/закрытие меню
 hamburger.addEventListener('click', () => {
     leftMenu.classList.toggle('openMenu');
     hamburger.classList.toggle('open');
+    closeDropdown();
 });
 document.addEventListener('click', event => {
     const target = event.target;
     if (!event.target.closest('.left-menu')) {
         leftMenu.classList.remove('openMenu');
         hamburger.classList.remove('open');
+        closeDropdown();
     }
 });
 leftMenu.addEventListener('click', () => {
+    event.preventDefault();
     const target = event.target;
     const dropdown = target.closest('.dropdown');
     if (dropdown) {
@@ -112,6 +139,7 @@ const changeImage = event => {
         [img.src, img.dataset.backdrop] = [img.dataset.backdrop, img.src]
     }
 };
+
 tvShowsList.addEventListener('mouseover', changeImage);
 tvShowsList.addEventListener('mouseout', changeImage);
 
@@ -122,24 +150,43 @@ tvShowsList.addEventListener('click', event => {
     const target = event.target;
     const card = target.closest('.tv-card');
     if (card) {
-        new DBService().getTestCard()
-            .then(data => {
-                console.log(data);
-                tvCardImg.src = IMG_URL + data.poster_path;
-                modalTitle.textContent = data.name;
-                /* genresList.innerHTML = data.genres.reduce((acc, item) => `${acc}<li>${item.name}</li>`, ''); */
-                genresList.textContent = '';
-                for (const item of data.genres) {
-                    genresList.innerHTML += `<li>${item.name}</li>`;
+        preLoader.style.display = 'block';
+        new DBService().getTvShow(card.id)
+            .then(({
+                poster_path: posterPath,
+                name: title,
+                genres,
+                vote_average: voteAverage,
+                overview,
+                homepage
+            }) => {
+                if (posterPath) {
+                    tvCardImg.src = IMG_URL + posterPath;
+                    tvCardImg.alt = title;
+                    posterWrapper.style.display = '';
+                    modalContent.style.paddingLeft = '';
+                } else {
+                    posterWrapper.style.display = 'none';
+                    modalContent.style.paddingLeft = '25px';
                 }
-                rating
-                description
-                modalLink
 
+                tvCardImg.src = IMG_URL + posterPath;
+                tvCardImg.alt = title;
+                modalTitle.textContent = title;
+                genresList.textContent = '';
+                genres.forEach(item => {
+                    genresList.innerHTML += `<li>${item.name}</li>`;
+                });
+                rating.textContent = voteAverage;
+                description.textContent = overview;
+                modalLink.href = homepage;
             })
             .then(() => {
                 document.body.style.overflow = 'hidden';
                 modal.classList.remove('hide');
+            })
+            .then(() => {
+                preLoader.style.display = '';
             })
     }
 });
